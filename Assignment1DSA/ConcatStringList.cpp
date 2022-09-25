@@ -8,6 +8,7 @@ ConcatStringList::ConcatStringList(const char *s) {
 	CharALNode* newNode = new CharALNode(s, nullptr);
 	this->head = newNode;
 	this->tail = newNode;
+	//newNode->ref = ConcatStringList;
 	this->sizeofStr = newNode->lenofNode();
 	refList.insertNode(newNode, 2);
 }
@@ -67,20 +68,22 @@ std::string ConcatStringList::toString() const {
 ConcatStringList ConcatStringList::concat(const ConcatStringList& otherS) const {
 	tail->next = otherS.head;
 	int tmp = sizeofStr + otherS.sizeofStr;
-	ConcatStringList *newStrList = new ConcatStringList(head, otherS.tail, tmp);
-	refList.insertNode(newStrList->head, 1);
-	refList.insertNode(newStrList->tail, 1);
-	return *newStrList;
+	//ConcatStringList *newStrList = new ConcatStringList(head, otherS.tail, tmp);
+	refList.insertNode(head, 1);
+	refList.insertNode(otherS.tail, 1);
+	return ConcatStringList(head, otherS.tail, tmp);
 }
 
 ConcatStringList ConcatStringList::subString(int from, int to) const {
-	ConcatStringList *subStrList = new ConcatStringList(nullptr, nullptr, 0);
+	CharALNode* tmp_head = nullptr, * tmp_tail = nullptr;
+	int sizeofstr = 0;
 	if (from < 0 || from >= this->sizeofStr || to < 0 || to >= this->sizeofStr)
 		throw std::out_of_range("Index of string is invalid");
 	else if (from >= to)
 		throw std::logic_error("Invalid range");
 	else {
 		CharALNode* ptr = head;
+		int sizeofstr = 0;
 		int idx = from;
 		while (ptr->arr.size() < from)
 			ptr = ptr->next;
@@ -93,107 +96,78 @@ ConcatStringList ConcatStringList::subString(int from, int to) const {
 			else {
 				ptr = ptr->next;
 				CharALNode* node = new CharALNode(tmp.c_str(), nullptr); //tmp delete will lead tmp.c_str() also deleted
-				if (subStrList->head == nullptr) {
-					subStrList->head = node;
-					subStrList->tail = node;
+				if (tmp_head == nullptr) {
+					tmp_head = node;
+					tmp_tail = node;
 				}
 				else {
-					subStrList->tail->next = node;
-					subStrList->tail = node;
+					tmp_tail->next = node;
+					tmp_tail = node;
 				}
-				subStrList->sizeofStr++;
+				sizeofstr++;
 				tmp.clear();
 				idx = 0;
 			}
 		}
 	}
-	refList.insertNode(subStrList->head, 1);
-	refList.insertNode(subStrList->tail, 1);
-	return *subStrList;
+	refList.insertNode(tmp_head, 1);
+	refList.insertNode(tmp_tail, 1);
+	return ConcatStringList(tmp_head, tmp_tail, sizeofstr);
 }
 
 ConcatStringList ConcatStringList::reverse() const {
-	ConcatStringList *RevList = new ConcatStringList(nullptr, nullptr, 0);
+	CharALNode* tmp_head = nullptr, * tmp_tail = nullptr;
+	int sizeofstr = 0;
 	CharALNode* ptr = head;
 	while (ptr != nullptr) {
 		string tmp;
 		for (int i = ptr->arr.size() - 1; i >= 0; i--)
 			tmp.push_back(ptr->arr[i]);
-		CharALNode* node = new CharALNode(tmp.c_str(), RevList->head);
-		RevList->head = node;
-		if (RevList->length() == 0)
-			RevList->tail = node;
-		RevList->sizeofStr++;
+		CharALNode* node = new CharALNode(tmp.c_str(), tmp_head);
+		tmp_head = node;
+		if (sizeofstr == 0)
+			tmp_tail = node;
+		sizeofstr++;
 		ptr = ptr->next;
 	}
-	refList.insertNode(RevList->tail, 1);
-	refList.insertNode(RevList->head, 1);
-	return *RevList;
+	refList.insertNode(tmp_head, 1);
+	refList.insertNode(tmp_tail, 1);
+	return ConcatStringList(tmp_head, tmp_tail, sizeofstr);
 }
 
 ConcatStringList::~ConcatStringList() {
 	refList.UpdatenumRef(head);
 	refList.UpdatenumRef(tail);
-	delStrList.insertNode(head,tail);
+	delStrList.insertNode(head,tail);  //Add condition
 	delStrList.getnumRef();
 	refList.clear();
 }
 
 //Class implemantation for ReferencesList
 void ConcatStringList::ReferencesList::insertionSort(refList* pivot) {
-	if (pivot->next == nullptr || pivot->numsofRef <= pivot->next->numsofRef) {
-		refList* ptr = head;
-		refList* prev = nullptr;
-		while (ptr->next != pivot) {
-			if (ptr->numsofRef < pivot->numsofRef) {
-				prev = ptr;
-				ptr = ptr->next;
-			}
-			else {
-				break;
-			}
-		}
-		refList* tmp = head;
-		while (tmp->next != pivot) {
-			tmp = tmp->next;
-			if (tmp->next == nullptr)
-				break;
-		}
-		if (tmp->next != ptr->next) {
-			tmp->next = pivot->next;
-			pivot->next = ptr;
-			if (ptr != head)
-				prev->next = pivot; //
-			else
-				head = pivot;
-		}
-	}
-	else {
-		refList* ptr = pivot->next;
-		refList* prev = nullptr;
-		while (ptr != nullptr) {
-			if (ptr->numsofRef <= pivot->numsofRef) {
-				prev = ptr;
-				ptr = ptr->next;
-			}
-			else {
-				break;
-			}
-		}
-		refList* tmp = head;
-		while (tmp->next != pivot) {
-			tmp = tmp->next;
-			if (tmp->next == nullptr)
-				break;
-		}
-		if (tmp == ReferencesList::tail)
-			tail = pivot;
-		if (pivot == head && head->next != nullptr)
+	refList* ptr = head;
+	if (capacity > 1) {
+		if (pivot == head)
 			head = head->next;
-		else 
-			tmp->next = pivot->next;
-		pivot->next = ptr;
-		prev->next = pivot;
+		else {
+			while (ptr->next != pivot && ptr->next != nullptr) {
+				ptr = ptr->next;
+			}
+			ptr->next = pivot->next;
+		}
+
+		refList* current = head;
+		if (head == NULL || head->numsofRef >= pivot->numsofRef) {
+			pivot->next = head;
+			head = pivot;
+		}
+		else {
+			while (current->next != NULL && current->next->numsofRef < pivot->numsofRef) {
+				current = current->next;
+			}
+			pivot->next = current->next;
+			current->next = pivot;
+		}
 	}
 }
 
@@ -257,7 +231,7 @@ bool ConcatStringList::ReferencesList::checkAllZero() {
 void ConcatStringList::ReferencesList::UpdatenumRef(CharALNode*& node) {
 	refList* tmp = search(node);
 	tmp->numsofRef--;
-	if (tmp->numsofRef == 0) {
+	if (tmp->numsofRef == 0 && capacity > 1) {
 		refList* pCurr = head;
 		refList* pPre = nullptr;
 		while (pCurr != tmp) {
@@ -333,15 +307,17 @@ void ConcatStringList::DeleteStringList::insertNode(CharALNode* head, CharALNode
 	deleteList* newNode = new deleteList(head, tail, nullptr);
 	newNode->head.reference = refList.search(head);
 	newNode->tail.reference = refList.search(tail);
-	if (delListHead == nullptr && delListTail == nullptr) {
-		delListHead = newNode;
-		delListTail = newNode;
+	if (newNode->head.reference->getnumsofRef() != 0 || newNode->tail.reference->getnumsofRef() != 0) {
+		if (delListHead == nullptr && delListTail == nullptr) {
+			delListHead = newNode;
+			delListTail = newNode;
+		}
+		else {
+			delListTail->next = newNode;
+			delListTail = newNode;
+		}
+		this->capacity++;
 	}
-	else {
-		delListTail->next = newNode;
-		delListTail = newNode;
-	}
-	this->capacity++;
 }
 
 void ConcatStringList::DeleteStringList::deleteNode(deleteList* node) {
@@ -351,11 +327,14 @@ void ConcatStringList::DeleteStringList::deleteNode(deleteList* node) {
 		pPre = pCurr;
 		pCurr = pCurr->next;
 	}
-	if (pPre == nullptr) 
-		delListHead = delListHead->next;
-	else 
-		pPre->next = pCurr->next;
+	if (capacity > 1) {
+		if (pCurr == delListHead)
+			delListHead = delListHead->next;
+		else
+			pPre->next = pCurr->next;
+	}
 	delete pCurr;
+	this->capacity--;
 }
 
 void ConcatStringList::DeleteStringList::getnumRef() {
@@ -399,6 +378,7 @@ ConcatStringList::DeleteStringList::~DeleteStringList() {
 	}
 }
 
+//Define
 void ConcatStringList::CharArrayList::operator=(const char* init) {
 	stringstream stream(init);
 	stream >> this->s;
