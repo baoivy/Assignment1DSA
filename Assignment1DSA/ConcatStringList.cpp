@@ -136,9 +136,9 @@ ConcatStringList ConcatStringList::reverse() const {
 }
 
 ConcatStringList::~ConcatStringList() {
+	delStrList.insertNode(head, tail);
 	refList.UpdatenumRef(head);
-	refList.UpdatenumRef(tail);
-	delStrList.insertNode(head,tail);  //Add condition
+	refList.UpdatenumRef(tail);  //Add condition
 	delStrList.getnumRef();
 	refList.clear();
 }
@@ -154,17 +154,23 @@ void ConcatStringList::ReferencesList::insertionSort(refList* pivot) {
 				ptr = ptr->next;
 			}
 			ptr->next = pivot->next;
+			if (ptr->next == nullptr)
+				tail = ptr;
 		}
 
 		refList* current = head;
-		if (head == NULL || head->numsofRef >= pivot->numsofRef) {
+		if (head == nullptr || head->numsofRef >= pivot->numsofRef) {
 			pivot->next = head;
 			head = pivot;
 		}
 		else {
-			while (current->next != NULL && current->next->numsofRef < pivot->numsofRef) {
+			while (current->next != nullptr && current->next->numsofRef < pivot->numsofRef) {
+				if (current->next->numsofRef == 0)
+					break;
 				current = current->next;
 			}
+			if (current->next == nullptr)
+				tail = pivot;
 			pivot->next = current->next;
 			current->next = pivot;
 		}
@@ -215,6 +221,7 @@ void ConcatStringList::ReferencesList::clear() {
 			delete ptr;
 			ptr = head;
 		}
+		this->capacity = 0;
 	}
 }
 
@@ -242,9 +249,9 @@ void ConcatStringList::ReferencesList::UpdatenumRef(CharALNode*& node) {
 			head = head->next;
 		else
 			pPre->next = pCurr->next;
-		tail->next = tmp;
-		tmp->next = nullptr;
+		tail->next = tmp; //
 		tail = tmp;
+		tmp->next = nullptr;
 	}
 	else {
 		insertionSort(tmp);
@@ -275,6 +282,8 @@ std::string ConcatStringList::ReferencesList::refCountsString() const {
 		res += to_string(ptr->getnumsofRef()) + ",";
 		ptr = ptr->next;
 	}
+	if(capacity > 0)
+		res.pop_back();
 	res += "]";
 	return res;
 }
@@ -304,10 +313,8 @@ ConcatStringList::ReferencesList::~ReferencesList() {
 
 //Class implementation for DeletStringList
 void ConcatStringList::DeleteStringList::insertNode(CharALNode* head, CharALNode* tail) {
-	deleteList* newNode = new deleteList(head, tail, nullptr);
-	newNode->head.reference = refList.search(head);
-	newNode->tail.reference = refList.search(tail);
-	if (newNode->head.reference->getnumsofRef() != 0 || newNode->tail.reference->getnumsofRef() != 0) {
+	deleteList* newNode = new deleteList(refList.search(head), refList.search(tail), nullptr);
+	if (newNode->ref_head->getnumsofRef() != 0 || newNode->ref_tail->getnumsofRef() != 0) {
 		if (delListHead == nullptr && delListTail == nullptr) {
 			delListHead = newNode;
 			delListTail = newNode;
@@ -330,6 +337,10 @@ void ConcatStringList::DeleteStringList::deleteNode(deleteList* node) {
 	if (capacity > 1) {
 		if (pCurr == delListHead)
 			delListHead = delListHead->next;
+		else if (pCurr == delListTail) {
+			pPre->next = nullptr;
+			delListTail = pPre;
+		}
 		else
 			pPre->next = pCurr->next;
 	}
@@ -340,18 +351,43 @@ void ConcatStringList::DeleteStringList::deleteNode(deleteList* node) {
 void ConcatStringList::DeleteStringList::getnumRef() {
 	deleteList* ptr1 = delListHead;
 	while (ptr1 != nullptr) {
-		if (ptr1->head.reference->getnumsofRef() == 0 && ptr1->tail.reference->getnumsofRef() == 0) {
-			CharALNode* ptr = delListHead->head.ptr;
-			while (ptr != delListHead->tail.ptr) {
-				delListHead->head.ptr = delListHead->head.ptr->next;
-				delete ptr;	
-				ptr = delListHead->head.ptr;
+		if (ptr1->ref_head->getnumsofRef() == 0 && ptr1->ref_tail->getnumsofRef() == 0 && 
+			ptr1->ref_head->ref != nullptr && ptr1->ref_tail->ref != nullptr) {
+			CharALNode* ptr = ptr1->ref_head->ref;
+			while (ptr != ptr1->ref_tail->ref) {
+				ptr1->ref_head->ref = ptr1->ref_head->ref->next;
+				delete ptr;
+				ptr = ptr1->ref_head->ref;
 			}
 			delete ptr;
-			deleteNode(ptr1);
+			ptr1->ref_head->ref = nullptr;
+			ptr1->ref_tail->ref = nullptr;
+			deleteList* ptr2 = ptr1;
+			ptr1 = ptr1->next;
+			deleteNode(ptr2);
+			if (capacity == 0) {
+				delListHead = nullptr;
+				delListTail = nullptr;
+			}
+				
 		}
 		else
 			ptr1 = ptr1->next;
+	}
+
+	deleteList* ptr2 = delListHead;
+	while (ptr2 != nullptr) {
+		if (ptr2->ref_head->numsofRef == 0 && ptr2->ref_tail->numsofRef == 0) {
+			deleteList* ptr3 = ptr2;
+			ptr2 = ptr2->next;
+			deleteNode(ptr3);
+		}
+		else
+			ptr2 = ptr2->next;
+	}
+	if (capacity == 0) {
+		delListHead = nullptr;
+		delListTail = nullptr;
 	}
 }
 
@@ -364,8 +400,12 @@ std::string ConcatStringList::DeleteStringList::totalRefCountsString() const {
 	res += "TotalRefCounts[";
 	deleteList* ptr = delListHead;
 	while (ptr != nullptr) {
-		res += to_string(ptr->head.reference->getnumsofRef());
+		res += to_string(ptr->ref_head->getnumsofRef()) + ",";
+		ptr = ptr->next;
 	}
+	if(capacity > 0)
+		res.pop_back();
+	res += "]";
 	return res;
 }
 
@@ -378,7 +418,7 @@ ConcatStringList::DeleteStringList::~DeleteStringList() {
 	}
 }
 
-//Define
+//Class Implementation for CharALNode
 void ConcatStringList::CharArrayList::operator=(const char* init) {
 	stringstream stream(init);
 	stream >> this->s;
