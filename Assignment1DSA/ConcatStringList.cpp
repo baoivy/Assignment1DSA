@@ -8,7 +8,6 @@ ConcatStringList::ConcatStringList(const char *s) {
 	CharALNode* newNode = new CharALNode(s, nullptr);
 	this->head = newNode;
 	this->tail = newNode;
-	//newNode->ref = ConcatStringList;
 	this->sizeofStr = newNode->lenofNode();
 	refList.insertNode(newNode, 2);
 }
@@ -28,13 +27,16 @@ int ConcatStringList::length() const {
 }
 
 char ConcatStringList::get(int index) const {
-	if (index >= this->sizeofStr)
+	if (index >= this->sizeofStr || index < 0) //
 		throw std::out_of_range("Index of string is invalid!");
 	else {
 		CharALNode* ptr = head;
-		while (ptr->arr.size() < index)
+		int count = 0;
+		while (count + ptr->arr.size() <= index) {
+			count += ptr->arr.size();
 			ptr = ptr->next;
-		return ptr->arr[index];
+		}
+		return ptr->arr[index - count];
 	}
 }
 
@@ -56,19 +58,17 @@ int ConcatStringList::indexOf(char c) const {
 std::string ConcatStringList::toString() const {
 	string res;
 	CharALNode* ptr = head;
-	while (ptr != nullptr) {
-		for (int i = 0; i < ptr->arr.size(); i++) {
-			res.push_back(ptr->arr[i]);
-		}
+	while (ptr != tail) {
+		res += ptr->arr.getString();
 		ptr = ptr->next;
 	}
-	return res;
+	res += tail->arr.getString();
+	return res;  
 }
 
 ConcatStringList ConcatStringList::concat(const ConcatStringList& otherS) const {
 	tail->next = otherS.head;
 	int tmp = sizeofStr + otherS.sizeofStr;
-	//ConcatStringList *newStrList = new ConcatStringList(head, otherS.tail, tmp);
 	refList.insertNode(head, 1);
 	refList.insertNode(otherS.tail, 1);
 	return ConcatStringList(head, otherS.tail, tmp);
@@ -77,23 +77,26 @@ ConcatStringList ConcatStringList::concat(const ConcatStringList& otherS) const 
 ConcatStringList ConcatStringList::subString(int from, int to) const {
 	CharALNode* tmp_head = nullptr, * tmp_tail = nullptr;
 	int sizeofstr = 0;
-	if (from < 0 || from >= this->sizeofStr || to < 0 || to >= this->sizeofStr)
+	if (from < 0 || from >= this->sizeofStr || to < 0 || to > this->sizeofStr)
 		throw std::out_of_range("Index of string is invalid");
 	else if (from >= to)
 		throw std::logic_error("Invalid range");
 	else {
 		CharALNode* ptr = head;
-		int sizeofstr = 0;
-		int idx = from;
-		while (ptr->arr.size() < from)
+		int count = 0;
+		while (count + ptr->arr.size() <= from) {
+			count += ptr->arr.size();
 			ptr = ptr->next;
+		}
 		string tmp;
-		for (int i = from; i <= to; i++) {
+		int idx = from - count;
+		for (int i = from; i < to; i++) {
 			if (idx != ptr->arr.size()) {
 				tmp += ptr->arr[idx];
 				idx++;
+				sizeofstr++;
 			}
-			else {
+			if (i == to - 1 || idx == ptr->arr.size()) {
 				ptr = ptr->next;
 				CharALNode* node = new CharALNode(tmp.c_str(), nullptr); //tmp delete will lead tmp.c_str() also deleted
 				if (tmp_head == nullptr) {
@@ -104,7 +107,6 @@ ConcatStringList ConcatStringList::subString(int from, int to) const {
 					tmp_tail->next = node;
 					tmp_tail = node;
 				}
-				sizeofstr++;
 				tmp.clear();
 				idx = 0;
 			}
@@ -119,17 +121,28 @@ ConcatStringList ConcatStringList::reverse() const {
 	CharALNode* tmp_head = nullptr, * tmp_tail = nullptr;
 	int sizeofstr = 0;
 	CharALNode* ptr = head;
-	while (ptr != nullptr) {
+	while (ptr != tail) {
 		string tmp;
-		for (int i = ptr->arr.size() - 1; i >= 0; i--)
+		for (int i = ptr->arr.size() - 1; i >= 0; i--) {
 			tmp.push_back(ptr->arr[i]);
+			sizeofstr++;
+		}
 		CharALNode* node = new CharALNode(tmp.c_str(), tmp_head);
-		tmp_head = node;
-		if (sizeofstr == 0)
+		if (tmp_head == nullptr)
 			tmp_tail = node;
-		sizeofstr++;
+		tmp_head = node;
 		ptr = ptr->next;
 	}
+	//For Tail
+	string tmp;
+	for (int i = tail->arr.size() - 1; i >= 0; i--) {
+		tmp.push_back(tail->arr[i]);
+		sizeofstr++;
+	}
+	CharALNode* node = new CharALNode(tmp.c_str(), tmp_head);
+	if (tmp_head == nullptr)
+		tmp_tail = node;
+	tmp_head = node;
 	refList.insertNode(tmp_head, 1);
 	refList.insertNode(tmp_tail, 1);
 	return ConcatStringList(tmp_head, tmp_tail, sizeofstr);
@@ -146,7 +159,9 @@ ConcatStringList::~ConcatStringList() {
 //Class implemantation for ReferencesList
 void ConcatStringList::ReferencesList::insertionSort(refList* pivot) {
 	refList* ptr = head;
-	if (capacity > 1) {
+	if (capacity > 0) {
+		if (head->next->getnumsofRef() == 0)
+			return;
 		if (pivot == head)
 			head = head->next;
 		else {
@@ -198,6 +213,7 @@ void ConcatStringList::ReferencesList::insertNode(CharALNode* node, int nums) {
 		if (ptr == nullptr) {
 			ReferencesList::refList* newNode = new refList(node, nums, head);
 			ReferencesList::head = newNode;
+			insertionSort(newNode);
 			this->capacity++;
 		}
 	}
@@ -245,11 +261,11 @@ void ConcatStringList::ReferencesList::UpdatenumRef(CharALNode*& node) {
 			pPre = pCurr;
 			pCurr = pCurr->next;
 		}
-		if (pPre == nullptr)
+		if (pCurr == head)
 			head = head->next;
 		else
 			pPre->next = pCurr->next;
-		tail->next = tmp; //
+		tail->next = tmp; //Add
 		tail = tmp;
 		tmp->next = nullptr;
 	}
@@ -298,12 +314,12 @@ ConcatStringList::ReferencesList::~ReferencesList() {
 			ptr = head;
 		}
 		else {
-			CharALNode* tmp_ptr = tmp_head;
-			while (tmp_ptr != nullptr) {
+			/*CharALNode* tmp_ptr = tmp_head;
+			while (tmp_head != nullptr) {
 				tmp_head = tmp_head->next;
-				delete tmp_ptr;
+				delete tmp_ptr; 
 				tmp_ptr = tmp_head;
-			}
+			}*/
 			head = head->next;
 			delete ptr;
 			ptr = head;
@@ -400,7 +416,10 @@ std::string ConcatStringList::DeleteStringList::totalRefCountsString() const {
 	res += "TotalRefCounts[";
 	deleteList* ptr = delListHead;
 	while (ptr != nullptr) {
-		res += to_string(ptr->ref_head->getnumsofRef()) + ",";
+		if (ptr->ref_head == ptr->ref_tail)
+			res += to_string(ptr->ref_head->getnumsofRef()) + ",";
+		else
+			res += to_string(ptr->ref_head->getnumsofRef() + ptr->ref_tail->getnumsofRef()) + ",";
 		ptr = ptr->next;
 	}
 	if(capacity > 0)
@@ -421,7 +440,7 @@ ConcatStringList::DeleteStringList::~DeleteStringList() {
 //Class Implementation for CharALNode
 void ConcatStringList::CharArrayList::operator=(const char* init) {
 	stringstream stream(init);
-	stream >> this->s;
+	getline(stream, this->s);
 }
 
 ConcatStringList::CharALNode::CharALNode(const char* s, CharALNode* next) {
