@@ -42,16 +42,18 @@ public:
             int capacity;
             void insertionSort(refList* );
             bool checkAllZero();
+        private:
+            void insertNode(CharALNode* , int);
+            refList* search(CharALNode* );
+            void UpdatenumRef(CharALNode*&);
+            void clear();
+            friend class ConcatStringList;
         public:
             ReferencesList() {
                 this->head = nullptr;
                 this->capacity = 0;
                 this->tail = nullptr;
             }
-            void insertNode(CharALNode* , int);
-            refList* search(CharALNode* );
-            void UpdatenumRef(CharALNode*&);
-            void clear();
             int size() const;
             int refCountAt(int index) const;
             std::string refCountsString() const;
@@ -63,6 +65,7 @@ public:
                     int numsofRef;
                     refList* next;
                     friend class ReferencesList;
+                    friend class DeleteStringList;
                 public:
                     refList(CharALNode* ref, int numsofRef, refList* next) {
                         this->ref = ref;
@@ -84,45 +87,51 @@ public:
             deleteList* delListHead;
             deleteList* delListTail;
             int capacity;
-        public:
             void insertNode(CharALNode*, CharALNode* );
             void deleteNode(deleteList* );
+        private:
             void getnumRef();
+            friend class ConcatStringList;
+        public:
+            DeleteStringList() {
+                this->delListHead = nullptr;
+                this->delListTail = nullptr;
+                this->capacity = 0;
+            }
             int size() const;
             std::string totalRefCountsString() const;
             ~DeleteStringList(); //This destructor will delete all node in heap
 
-            class delNode {
-                public:
-                    CharALNode* ptr;
-                    ReferencesList::refList* reference;
-            };
-
             class deleteList {
-                delNode head, tail;
-                deleteList* next;
-                friend class DeleteStringList;
-            public:
-                deleteList(CharALNode* head, CharALNode* tail, deleteList* next) {
-                    this->head.ptr = head;
-                    this->tail.ptr = tail;
-                    this->next = next;
-                }
+                private:
+                    ReferencesList::refList* ref_head;
+                    ReferencesList::refList* ref_tail;
+                    deleteList* next;
+                    friend class DeleteStringList;
+                public:
+                    deleteList(ReferencesList::refList* ref_head, ReferencesList::refList* ref_tail, deleteList* next) {
+                        this->ref_head = ref_head;
+                        this->ref_tail = ref_tail;
+                        this->next = next;
+                    }
             };
     };
 
     class CharArrayList {
-    private:
-        string s;
-    public:
-        CharArrayList();
-        void operator= (const char*);
-        int size() {
-            return this->s.length();
-        }
-        char operator[] (int index) {
-             return this->s[index];
-        }
+        private:
+            string s;
+        public:
+            CharArrayList();
+            void operator= (const char*);
+            int size() {
+                return (int)(this->s.length());
+            }
+            char operator[] (int index) {
+                 return this->s[index];
+            }
+            string getString() {
+                return s;
+            }
     };
 
     class CharALNode {
